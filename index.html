@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>立式金属罐实际质量计算器</title>
   <script src="tank_data.js"></script>
+  <script src="app.js" defer></script>
   <style>
     :root {
       --bg: #f6f7f4;
@@ -307,7 +308,7 @@
     <h1>立式金属罐实际质量计算器</h1>
     <div class="meta">
       <span>证书编号：JDLN20260056</span>
-      <span>罐号：对二甲苯</span>
+      <span>储罐：V0204 / V0205 / V0206</span>
       <span>参照高度：17026 mm</span>
       <span>容量表：20℃</span>
     </div>
@@ -318,6 +319,11 @@
       <form class="panel" id="calcForm">
         <h2>输入参数</h2>
         <div class="panel-body">
+          <div class="field">
+            <label for="tankSelect">储罐选择 <span>V0204=1#苯，V0205=2#苯，V0206=二甲苯</span></label>
+            <select id="tankSelect"></select>
+          </div>
+
           <div class="field">
             <label for="levelInput">液位高度 <span>mm，也可输入 8.500m</span></label>
             <input id="levelInput" inputmode="decimal" value="8500" autocomplete="off">
@@ -395,6 +401,7 @@
       <h2>使用教程</h2>
       <h3>网页使用</h3>
       <ol>
+        <li>先选择储罐：V0204 为 1#苯储罐，V0205 为 2#苯储罐，V0206 为二甲苯储罐。</li>
         <li>输入液位高度，默认单位为 mm，也支持 `8.500m` 这种写法。</li>
         <li>输入 20℃密度，单位为 g/cm³。</li>
         <li>输入罐内液体温度和罐外四周空气平均温度。</li>
@@ -412,16 +419,18 @@
 
       <h3>计量注意事项</h3>
       <ul>
-        <li>`107.00 mm（含）以下不作计量`。</li>
-        <li>`1437 mm - 1637 mm` 区间不得作为计量使用。</li>
+        <li>不同储罐使用各自的容量表和静压力修正表，切换储罐后会自动切换数据。</li>
+        <li>V0206：`107.00 mm（含）以下不作计量`。</li>
+        <li>V0206：`1437 mm - 1637 mm` 区间不得作为计量使用。</li>
         <li>容量表为 20℃容量，工具会按非保温罐公式进行温度修正。</li>
-        <li>液位超过 `1637 mm` 时，默认扣除浮顶影响，浮顶质量按 `3800 kg`。</li>
+        <li>V0206 液位超过 `1637 mm` 时，默认扣除浮顶影响，浮顶质量按 `3800 kg`。</li>
+        <li>V0204/V0205 当前工作簿未识别到浮顶质量，默认不做浮顶扣除。</li>
         <li>证书过期、罐体大修或严重变形后，应重新检定后再使用。</li>
       </ul>
     </section>
   </main>
 
-  <script>
+  <script type="application/x-old">
     const DATA = window.TANK_DATA;
     const capacityMap = new Map(DATA.capacity.map(row => [row.height_mm, row.volume_kl]));
     const pressureMap = new Map(DATA.static_pressure.map(row => [row.height_mm, row.delta_kl_at_density_1]));
