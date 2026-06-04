@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>立式金属罐实际质量计算器</title>
+  <script src="tank_data.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #17201b;
+      --muted: #66726c;
+      --line: #d6ddd7;
+      --accent: #146c5c;
+      --accent-2: #a7582c;
+      --danger: #b42318;
+      --warn: #8a5a00;
+      --ok: #146c43;
+      --soft: #e9f3ef;
+      --shadow: 0 8px 24px rgba(18, 36, 28, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .app-header {
+      background: #12352e;
+      color: #fff;
+      padding: 20px clamp(16px, 4vw, 40px);
+      border-bottom: 4px solid #d7a15b;
+    }
+
+    .app-header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(22px, 3vw, 34px);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      color: #d9e8e3;
+      font-size: 14px;
+    }
+
+    main {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 20px clamp(12px, 3vw, 28px) 36px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel h2 {
+      margin: 0;
+      padding: 16px 18px 10px;
+      font-size: 18px;
+    }
+
+    .panel-body { padding: 0 18px 18px; }
+
+    .field {
+      margin: 12px 0;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    label span {
+      color: var(--muted);
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid #bcc7c0;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      padding: 11px 12px;
+      min-height: 44px;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid rgba(20, 108, 92, 0.22);
+      border-color: var(--accent);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      min-height: 44px;
+      padding: 0 16px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      flex: 1;
+    }
+
+    .secondary {
+      background: #e7ece8;
+      color: #1c2a24;
+    }
+
+    .result-hero {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 0 18px 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfb;
+    }
+
+    .metric.primary-metric {
+      grid-column: 1 / -1;
+      background: var(--soft);
+      border-color: #bfd9cf;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .metric .value {
+      font-size: clamp(22px, 4vw, 34px);
+      font-weight: 800;
+      letter-spacing: 0;
+      word-break: break-word;
+    }
+
+    .metric .unit {
+      color: var(--muted);
+      font-size: 14px;
+      margin-left: 4px;
+    }
+
+    .messages {
+      margin: 0 18px 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .message {
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .message.error {
+      border-color: #f1b8b2;
+      background: #fff4f2;
+      color: var(--danger);
+    }
+
+    .message.warn {
+      border-color: #ebd293;
+      background: #fff8df;
+      color: var(--warn);
+    }
+
+    .message.ok {
+      border-color: #b9dbc9;
+      background: #f0fbf5;
+      color: var(--ok);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      background: #fafbfa;
+    }
+
+    td:last-child, th:last-child { text-align: right; }
+
+    details {
+      border-top: 1px solid var(--line);
+      padding: 0 18px;
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 14px 0;
+      font-weight: 700;
+    }
+
+    .help {
+      margin-top: 18px;
+      padding: 18px;
+    }
+
+    .help h2 {
+      padding: 0;
+      margin-bottom: 10px;
+    }
+
+    .help h3 {
+      margin: 18px 0 6px;
+      font-size: 16px;
+    }
+
+    .help ol, .help ul {
+      margin: 8px 0 0;
+      padding-left: 22px;
+    }
+
+    .help li { margin: 5px 0; }
+
+    .note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .result-hero { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .row { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      .secondary { width: 100%; }
+      th, td { font-size: 13px; }
+      label {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+      }
+      label span {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>立式金属罐实际质量计算器</h1>
+    <div class="meta">
+      <span>证书编号：JDLN20260056</span>
+      <span>罐号：对二甲苯</span>
+      <span>参照高度：17026 mm</span>
+      <span>容量表：20℃</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="layout">
+      <form class="panel" id="calcForm">
+        <h2>输入参数</h2>
+        <div class="panel-body">
+          <div class="field">
+            <label for="levelInput">液位高度 <span>mm，也可输入 8.500m</span></label>
+            <input id="levelInput" inputmode="decimal" value="8500" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="densityInput">20℃密度 <span>g/cm³</span></label>
+            <input id="densityInput" inputmode="decimal" value="0.8600" autocomplete="off">
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="liquidTempInput">罐内液体温度 <span>℃</span></label>
+              <input id="liquidTempInput" inputmode="decimal" value="25.0" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="airTempInput">罐外空气平均温度 <span>℃</span></label>
+              <input id="airTempInput" inputmode="decimal" value="20.0" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="pressureMode">静压力查表 <span>0.1 m 档</span></label>
+              <select id="pressureMode">
+                <option value="floor" selected>向下取 0.1 m 档</option>
+                <option value="nearest">取最近 0.1 m 档</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="roofMode">浮顶修正 <span>H &gt; 1637 mm</span></label>
+              <select id="roofMode">
+                <option value="auto" selected>自动扣除</option>
+                <option value="off">不扣除</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="primary" type="submit">计算</button>
+            <button class="secondary" type="button" id="copyBtn">复制结果</button>
+          </div>
+          <p class="note">本工具按非保温罐、20℃密度、静压力修正启用、输出实际质量的口径计算。</p>
+        </div>
+      </form>
+
+      <section class="panel">
+        <h2>计算结果</h2>
+        <div class="messages" id="messages"></div>
+        <div class="result-hero">
+          <div class="metric primary-metric">
+            <div class="label">实际质量</div>
+            <div class="value"><span id="massTon">--</span><span class="unit">t</span></div>
+          </div>
+          <div class="metric">
+            <div class="label">最终计量体积</div>
+            <div class="value"><span id="finalVolume">--</span><span class="unit">kL</span></div>
+          </div>
+          <div class="metric">
+            <div class="label">容量表值</div>
+            <div class="value"><span id="baseVolume">--</span><span class="unit">kL</span></div>
+          </div>
+        </div>
+
+        <details open>
+          <summary>计算过程</summary>
+          <table>
+            <tbody id="detailRows"></tbody>
+          </table>
+        </details>
+      </section>
+    </section>
+
+    <section class="panel help">
+      <h2>使用教程</h2>
+      <h3>网页使用</h3>
+      <ol>
+        <li>输入液位高度，默认单位为 mm，也支持 `8.500m` 这种写法。</li>
+        <li>输入 20℃密度，单位为 g/cm³。</li>
+        <li>输入罐内液体温度和罐外四周空气平均温度。</li>
+        <li>点击计算，查看实际质量、最终体积和查表修正过程。</li>
+        <li>出现红色提示时，该液位不能作为有效计量结果使用。</li>
+      </ol>
+
+      <h3>Excel 嵌入使用</h3>
+      <ol>
+        <li>将 `index.html` 和 `tank_data.js` 放在同一个文件夹。</li>
+        <li>在 Excel 中使用“插入 Web 页面/浏览器控件/Office 加载项”方式指向该 HTML 文件或部署后的网页地址。</li>
+        <li>如 Excel 不允许直接打开本地 HTML，建议把文件放到内网服务器，再用内网地址嵌入。</li>
+        <li>嵌入后仍按网页步骤输入参数并复制结果。</li>
+      </ol>
+
+      <h3>计量注意事项</h3>
+      <ul>
+        <li>`107.00 mm（含）以下不作计量`。</li>
+        <li>`1437 mm - 1637 mm` 区间不得作为计量使用。</li>
+        <li>容量表为 20℃容量，工具会按非保温罐公式进行温度修正。</li>
+        <li>液位超过 `1637 mm` 时，默认扣除浮顶影响，浮顶质量按 `3800 kg`。</li>
+        <li>证书过期、罐体大修或严重变形后，应重新检定后再使用。</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    const DATA = window.TANK_DATA;
+    const capacityMap = new Map(DATA.capacity.map(row => [row.height_mm, row.volume_kl]));
+    const pressureMap = new Map(DATA.static_pressure.map(row => [row.height_mm, row.delta_kl_at_density_1]));
+    const extras = DATA.millimeter_extras.map(row => ({
+      ...row,
+      extras: Object.fromEntries(Object.entries(row.extras).map(([k, v]) => [Number(k), v]))
+    }));
+    const meta = DATA.meta;
+    let lastResultText = "";
+
+    function parseNumber(raw) {
+      if (typeof raw !== "string") return Number(raw);
+      const value = raw.trim().replace(",", ".");
+      const match = value.match(/^(-?\d+(?:\.\d+)?)(mm|毫米|cm|厘米|m|米)?$/i);
+      if (!match) return NaN;
+      const num = Number(match[1]);
+      const unit = (match[2] || "").toLowerCase();
+      if (unit === "m" || unit === "米") return num * 1000;
+      if (unit === "cm" || unit === "厘米") return num * 10;
+      return num;
+    }
+
+    function parseDensity(raw) {
+      const value = String(raw).trim().replace(",", ".");
+      if (!value) return NaN;
+      const num = Number(value);
+      if (!Number.isFinite(num)) return NaN;
+      return num > 10 ? num / 1000 : num;
+    }
+
+    function fmt(value, digits = 3) {
+      if (!Number.isFinite(value)) return "--";
+      return value.toLocaleString("zh-CN", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+
+    function getMillimeterExtra(levelMm, remainderMm) {
+      if (remainderMm === 0) return { value: 0, range: null };
+      const range = extras.find(row => levelMm > row.start_mm && levelMm <= row.end_mm);
+      if (!range || range.extras[remainderMm] == null) {
+        throw new Error("未找到该液位所在区间的毫米容量补充值。");
+      }
+      return { value: range.extras[remainderMm], range };
+    }
+
+    function lookupCapacity(levelMm) {
+      const rounded = Math.round(levelMm);
+      const baseMm = Math.floor(rounded / 10) * 10;
+      const remainderMm = rounded - baseMm;
+      const base = capacityMap.get(baseMm);
+      if (base == null) throw new Error("未找到该液位的厘米容量表值。");
+      const extra = getMillimeterExtra(rounded, remainderMm);
+      return {
+        roundedLevelMm: rounded,
+        baseMm,
+        remainderMm,
+        baseVolume: base,
+        mmExtra: extra.value,
+        mmRange: extra.range,
+        tableVolume: base + extra.value
+      };
+    }
+
+    function lookupPressure(levelMm, mode) {
+      let key;
+      if (Math.round(levelMm) === 15833) {
+        key = 15833;
+      } else if (mode === "nearest") {
+        key = Math.round(levelMm / 100) * 100;
+      } else {
+        key = Math.floor(levelMm / 100) * 100;
+      }
+      key = Math.max(0, Math.min(15800, key));
+      return { pressureHeightMm: key, deltaAtDensity1: pressureMap.get(key) || 0 };
+    }
+
+    function validate(levelMm, density, liquidTemp, airTemp) {
+      const messages = [];
+      let blocked = false;
+      if (!Number.isFinite(levelMm)) {
+        messages.push({ type: "error", text: "液位高度输入无效。" });
+        blocked = true;
+      }
+      if (!Number.isFinite(density) || density <= 0) {
+        messages.push({ type: "error", text: "20℃密度输入无效。" });
+        blocked = true;
+      }
+      if (!Number.isFinite(liquidTemp) || !Number.isFinite(airTemp)) {
+        messages.push({ type: "error", text: "温度输入无效。" });
+        blocked = true;
+      }
+      if (Number.isFinite(levelMm)) {
+        if (levelMm < 0) {
+          messages.push({ type: "error", text: "液位高度不能为负数。" });
+          blocked = true;
+        }
+        if (levelMm <= meta.invalid_min_height_mm) {
+          messages.push({ type: "error", text: "107.00 mm（含）以下不作计量。" });
+          blocked = true;
+        }
+        if (levelMm >= meta.invalid_band_start_mm && levelMm <= meta.invalid_band_end_mm) {
+          messages.push({ type: "error", text: "液位在 1437 mm - 1637 mm 区间，不得作为计量使用。" });
+          blocked = true;
+        }
+        if (levelMm > 15833) {
+          messages.push({ type: "error", text: "液位超过容量表终点 15833 mm。" });
+          blocked = true;
+        }
+      }
+      if (Number.isFinite(density) && density <= 0.0011) {
+        messages.push({ type: "error", text: "密度过低，无法进行浮顶体积修正。" });
+        blocked = true;
+      }
+      return { messages, blocked };
+    }
+
+    function calculate() {
+      const levelMm = parseNumber(document.getElementById("levelInput").value);
+      const density = parseDensity(document.getElementById("densityInput").value);
+      const liquidTemp = Number(document.getElementById("liquidTempInput").value.replace(",", "."));
+      const airTemp = Number(document.getElementById("airTempInput").value.replace(",", "."));
+      const pressureMode = document.getElementById("pressureMode").value;
+      const roofMode = document.getElementById("roofMode").value;
+      const validation = validate(levelMm, density, liquidTemp, airTemp);
+      const messages = [...validation.messages];
+
+      if (validation.blocked) {
+        renderMessages(messages);
+        renderEmpty();
+        return;
+      }
+
+      try {
+        const cap = lookupCapacity(levelMm);
+        const pressure = lookupPressure(cap.roundedLevelMm, pressureMode);
+        const deltaPressure = pressure.deltaAtDensity1 * density;
+        const wallTemp = ((7 * liquidTemp) + airTemp) / 8;
+        const correctedVolume = (cap.tableVolume + deltaPressure) * (1 + 2 * meta.alpha * (wallTemp - 20));
+        const roofVolume = (roofMode === "auto" && cap.roundedLevelMm > meta.invalid_band_end_mm)
+          ? meta.floating_roof_mass_kg / ((density - 0.0011) * 1000)
+          : 0;
+        const finalVolume = correctedVolume - roofVolume;
+        const massTon = finalVolume * density;
+        const massKg = massTon * 1000;
+
+        messages.push({ type: "ok", text: "计算完成。结果按实际质量输出，静压力修正已启用。" });
+        if (cap.roundedLevelMm !== levelMm) {
+          messages.push({ type: "warn", text: `液位已按最接近的整毫米 ${cap.roundedLevelMm} mm 查表。` });
+        }
+        if (roofVolume === 0 && cap.roundedLevelMm > meta.invalid_band_end_mm) {
+          messages.push({ type: "warn", text: "当前设置为不扣除浮顶修正。" });
+        }
+
+        const rows = [
+          ["查表液位", `${cap.roundedLevelMm} mm`],
+          ["厘米容量基准", `${cap.baseMm} mm → ${fmt(cap.baseVolume)} kL`],
+          ["毫米补容量", `${cap.remainderMm} mm → ${fmt(cap.mmExtra)} kL`],
+          ["容量表值 VB", `${fmt(cap.tableVolume)} kL`],
+          ["静压力查表高度", `${pressure.pressureHeightMm} mm`],
+          ["静压力表值", `${fmt(pressure.deltaAtDensity1)} kL`],
+          ["静压力修正 ΔVP", `${fmt(deltaPressure)} kL`],
+          ["罐壁温度", `${fmt(wallTemp, 2)} ℃`],
+          ["温度修正后容量 Vt", `${fmt(correctedVolume)} kL`],
+          ["浮顶扣除体积", `${fmt(roofVolume)} kL`],
+          ["最终计量体积", `${fmt(finalVolume)} kL`],
+          ["实际质量", `${fmt(massTon)} t / ${fmt(massKg, 0)} kg`]
+        ];
+
+        lastResultText = rows.map(row => `${row[0]}：${row[1]}`).join("\n");
+        renderMessages(messages);
+        renderResults({ massTon, finalVolume, baseVolume: cap.tableVolume, rows });
+      } catch (err) {
+        renderMessages([{ type: "error", text: err.message }]);
+        renderEmpty();
+      }
+    }
+
+    function renderMessages(messages) {
+      const box = document.getElementById("messages");
+      box.innerHTML = messages.map(msg => `<div class="message ${msg.type}">${msg.text}</div>`).join("");
+    }
+
+    function renderEmpty() {
+      document.getElementById("massTon").textContent = "--";
+      document.getElementById("finalVolume").textContent = "--";
+      document.getElementById("baseVolume").textContent = "--";
+      document.getElementById("detailRows").innerHTML = "";
+      lastResultText = "";
+    }
+
+    function renderResults(result) {
+      document.getElementById("massTon").textContent = fmt(result.massTon);
+      document.getElementById("finalVolume").textContent = fmt(result.finalVolume);
+      document.getElementById("baseVolume").textContent = fmt(result.baseVolume);
+      document.getElementById("detailRows").innerHTML = result.rows
+        .map(row => `<tr><th>${row[0]}</th><td>${row[1]}</td></tr>`)
+        .join("");
+    }
+
+    document.getElementById("calcForm").addEventListener("submit", event => {
+      event.preventDefault();
+      calculate();
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      if (!lastResultText) calculate();
+      if (!lastResultText) return;
+      try {
+        await navigator.clipboard.writeText(lastResultText);
+        renderMessages([{ type: "ok", text: "结果已复制。" }]);
+      } catch {
+        renderMessages([{ type: "warn", text: "当前环境不允许自动复制，请手动选择计算过程内容复制。" }]);
+      }
+    });
+
+    calculate();
+  </script>
+</body>
+</html>
